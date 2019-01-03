@@ -1,4 +1,4 @@
- {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main(main) where
 
@@ -60,7 +60,10 @@ readLogs :: FilePath -> IO DayLog
 readLogs logFileName = reverse . read <$> S.readFile logFileName
 
 writeLogs :: FilePath -> DayLog -> IO ()
-writeLogs logFileName = writeFile logFileName . show . reverse
+writeLogs logFileName = writeFile logFileName . pretty . reverse
+
+pretty :: DayLog -> String
+pretty logs = "[ " ++ intercalate "\n, " (map show logs) ++ "\n]"
 
 main :: IO ()
 main = do
