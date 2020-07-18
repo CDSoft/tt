@@ -15,6 +15,7 @@ import System.Environment
 import System.Exit
 import System.FilePath
 import qualified System.IO.Strict as S
+import Text.Read
 
 longPause :: Int
 longPause = 30 -- minutes
@@ -56,8 +57,8 @@ getLogFileName = do
     unless isDir $ createDirectory dir
     return $ home </> database </> timestamp
 
-readLogs :: FilePath -> IO DayLog
-readLogs logFileName = reverse . read <$> S.readFile logFileName
+readLogs :: FilePath -> IO (Maybe DayLog)
+readLogs logFileName = fmap reverse <$> (readMaybe <$> S.readFile logFileName)
 
 writeLogs :: FilePath -> DayLog -> IO ()
 writeLogs logFileName = writeFile logFileName . pretty . reverse
@@ -86,7 +87,7 @@ daemon = do
     logFileName <- getLogFileName
     isFile <- doesFileExist logFileName
     logs <- if isFile
-        then readLogs logFileName
+        then fromMaybe [] <$> readLogs logFileName
         else return []
     loop logFileName logs
 
@@ -111,9 +112,9 @@ report :: IO ()
 report = do
     home <- getHomeDirectory
     days <- sort <$> listDirectory (home </> database)
-    logs <- groupOn (weekNumber . snd) <$> do
+    logs <- groupOn (weekNumber . snd) . catMaybes <$> do
         forM days $ \day ->
-            (day, ) <$> readLogs (home </> database </> day)
+            fmap (day, ) <$> readLogs (home </> database </> day)
     let plain = unlines $ intercalate [""] $ map (mapMaybe showLog) logs
     putStr plain
 
